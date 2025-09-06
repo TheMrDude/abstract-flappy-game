@@ -144,7 +144,8 @@
 
     // Load sprite and prepare tinted skins
     const baseImage = new Image();
-    baseImage.src = 'assets/abstract-logo.png';
+/
+baseImage.src = 'abstract-logo.png';
     const skins = [];
     const ownedSkins = JSON.parse(localStorage.getItem('ownedSkins') || '[0]'); // default skin index 0 owned
     let currentSkinIndex = parseInt(localStorage.getItem('currentSkin') || '0');

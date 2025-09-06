@@ -144,11 +144,25 @@
 
     // Load sprite and prepare tinted skins
     const baseImage = new Image();
-/
-baseImage.src = 'abstract-logo.png';
+    // Use abstract logo in root by default
+    baseImage.src = 'abstract-logo.png';
     const skins = [];
     const ownedSkins = JSON.parse(localStorage.getItem('ownedSkins') || '[0]'); // default skin index 0 owned
     let currentSkinIndex = parseInt(localStorage.getItem('currentSkin') || '0');
+
+    // --- Advertisement setup ---
+    // Define the filenames of advertisement images. These images should be stored
+    // in a folder named "ads" relative to this HTML file. Add or remove entries
+    // here to control which ads are displayed. By default, a placeholder image
+    // is referenced. Replace 'ads/placeholder.png' with real ad file names.
+    const adFilenames = ['ads/placeholder.png'];
+    // Preload ad images into an array of Image objects.
+    const adImages = [];
+    adFilenames.forEach((file) => {
+      const img = new Image();
+      img.src = file;
+      adImages.push(img);
+    });
 
     // Colours for tinting additional skins
     const tintColours = [
@@ -267,7 +281,10 @@ baseImage.src = 'abstract-logo.png';
     function generatePipe() {
       const topHeight = Math.random() * (HEIGHT - PIPE_GAP - 100) + 20;
       const bottomY = topHeight + PIPE_GAP;
-      pipes.push({ x: WIDTH, topHeight: topHeight, bottomY: bottomY, passed: false });
+      // Choose a random advertisement index if ads have been loaded. If no ads
+      // are available, the index will be null and the pipe falls back to the default color.
+      const adIndex = adImages.length > 0 ? Math.floor(Math.random() * adImages.length) : null;
+      pipes.push({ x: WIDTH, topHeight: topHeight, bottomY: bottomY, passed: false, adIndex: adIndex });
     }
 
     function update() {
@@ -324,13 +341,18 @@ baseImage.src = 'abstract-logo.png';
         ctx.drawImage(skins[currentSkinIndex], pt.x - bird.r, pt.y - bird.r, bird.r*2, bird.r*2);
       });
       ctx.globalAlpha = 1.0;
-      // draw pipes
-      ctx.fillStyle = '#27ae60';
+      // draw pipes (show ads if available)
       pipes.forEach(pipe => {
-        // top
-        ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
-        // bottom
-        ctx.fillRect(pipe.x, pipe.bottomY, PIPE_WIDTH, HEIGHT - pipe.bottomY);
+        if (adImages.length > 0 && pipe.adIndex !== null && adImages[pipe.adIndex]) {
+          // draw advertisement image over the top and bottom pipe sections
+          ctx.drawImage(adImages[pipe.adIndex], pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
+          ctx.drawImage(adImages[pipe.adIndex], pipe.x, pipe.bottomY, PIPE_WIDTH, HEIGHT - pipe.bottomY);
+        } else {
+          // fallback: draw solid green pipes
+          ctx.fillStyle = '#27ae60';
+          ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
+          ctx.fillRect(pipe.x, pipe.bottomY, PIPE_WIDTH, HEIGHT - pipe.bottomY);
+        }
       });
       // draw bird (current skin)
       ctx.drawImage(skins[currentSkinIndex], bird.x - bird.r, bird.y - bird.r, bird.r * 2, bird.r * 2);

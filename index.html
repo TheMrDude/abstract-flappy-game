@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Abstract Flappy Extras</title>
+  <style>
+    /* Basic page styling */
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #ecf0f1;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    #gameCanvas {
+      display: block;
+      margin: 0 auto;
+      background: #87CEEB; /* sky blue */
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 20px;
+      color: #2c3e50;
+      background: rgba(255,255,255,0.7);
+      padding: 6px 10px;
+      border-radius: 6px;
+      line-height: 1.4;
+    }
+    #skinMenu {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255,255,255,0.8);
+      padding: 6px;
+      border-radius: 6px;
+      max-width: 160px;
+      font-size: 14px;
+    }
+    #skinMenu h3 {
+      margin: 0 0 4px 0;
+      font-size: 16px;
+      color: #2c3e50;
+    }
+    #skinMenu button {
+      margin: 2px;
+      padding: 4px 6px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    #message {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 18px;
+      display: none;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <div id="hud">
+    Score: <span id="score">0</span><br>
+    Best: <span id="best">0</span><br>
+    Seed: <span id="seedDisplay">-</span>
+  </div>
+  <div id="skinMenu">
+    <h3>Skins</h3>
+    <div id="skinsContainer"></div>
+  </div>
+  <div id="message"></div>
+  <script>
+    /*
+     * Abstract Flappy Bird with extras
+     *
+     * Controls:
+     *  - Enter: start game
+     *  - Space/Click/Tap: flap
+     *  - R: reset game
+     *
+     * Features:
+     *  - On‑chain leaderboard submission (stubbed with console output)
+     *  - Anti‑cheat seed hashing
+     *  - NFT skins & random drops
+     *  - Audio SFX for flap, score and crash
+     *  - Visual trail effect behind the player
+     */
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const bestEl = document.getElementById('best');
+    const seedEl = document.getElementById('seedDisplay');
+    const skinsContainer = document.getElementById('skinsContainer');
+    const messageEl = document.getElementById('message');
+
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+
+    // Game configuration constants
+    const GRAVITY = 0.6;
+    const FLAP_STRENGTH = -10;
+    const PIPE_GAP = 130;
+    const PIPE_WIDTH = 50;
+    const PIPE_SPEED = 2;
+    const TRAIL_LENGTH = 10;
+
+    let bird;
+    let pipes;
+    let score;
+    let bestScore = parseInt(localStorage.getItem('bestScore') || '0');
+    bestEl.innerText = bestScore;
+    let running = false;
+    let animationFrame;
+    let seed;
+    let trail;
+
+    // Audio context for simple beep sounds
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playTone(freq, duration = 0.1, volume = 0.05) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.value = freq;
+      gain.gain.value = volume;
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+    function playFlap() { playTone(600, 0.08, 0.05); }
+    function playScore() { playTone(800, 0.1, 0.07); }
+    function playCrash() { playTone(200, 0.2, 0.1); }
+
+    // Load sprite and prepare tinted skins
+    const baseImage = new Image();
+    baseImage.src = 'assets/abstract-logo.png';
+    const skins = [];
+    const ownedSkins = JSON.parse(localStorage.getItem('ownedSkins') || '[0]'); // default skin index 0 owned
+    let currentSkinIndex = parseInt(localStorage.getItem('currentSkin') || '0');
+
+    // Colours for tinting additional skins
+    const tintColours = [
+      '#E74C3C', // red
+      '#3498DB', // blue
+      '#F1C40F', // yellow
+      '#8E44AD', // purple
+      '#1ABC9C', // teal
+      '#F39C12', // orange
+      '#E84393', // pink
+      '#2ECC71', // green
+    ];
+
+    baseImage.onload = () => {
+      generateSkins();
+      renderSkinMenu();
+    };
+
+    function generateSkins() {
+      skins.length = 0;
+      // Default skin (no tint)
+      skins.push(baseImage);
+      // Generate tinted variants using off‑screen canvas
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = baseImage.width;
+      offCanvas.height = baseImage.height;
+      const offCtx = offCanvas.getContext('2d');
+      tintColours.forEach(col => {
+        offCtx.clearRect(0,0,offCanvas.width, offCanvas.height);
+        offCtx.drawImage(baseImage, 0, 0);
+        offCtx.globalCompositeOperation = 'source-atop';
+        offCtx.fillStyle = col;
+        offCtx.fillRect(0,0,offCanvas.width, offCanvas.height);
+        offCtx.globalCompositeOperation = 'source-over';
+        const tinted = new Image();
+        tinted.src = offCanvas.toDataURL();
+        skins.push(tinted);
+      });
+    }
+
+    function renderSkinMenu() {
+      skinsContainer.innerHTML = '';
+      skins.forEach((img, index) => {
+        const btn = document.createElement('button');
+        btn.innerText = `Skin ${index}`;
+        btn.disabled = !ownedSkins.includes(index);
+        if(index === currentSkinIndex) {
+          btn.style.fontWeight = 'bold';
+        }
+        btn.addEventListener('click', () => {
+          if(ownedSkins.includes(index)) {
+            currentSkinIndex = index;
+            localStorage.setItem('currentSkin', currentSkinIndex);
+            renderSkinMenu();
+          }
+        });
+        skinsContainer.appendChild(btn);
+      });
+    }
+
+    function awardRandomSkin() {
+      // 25% chance to drop a random new skin when score beats best
+      if(Math.random() < 0.25) {
+        const unowned = skins.map((_, i) => i).filter(i => !ownedSkins.includes(i));
+        if(unowned.length > 0) {
+          const newSkin = unowned[Math.floor(Math.random() * unowned.length)];
+          ownedSkins.push(newSkin);
+          localStorage.setItem('ownedSkins', JSON.stringify(ownedSkins));
+          renderSkinMenu();
+          showMessage(`You unlocked Skin ${newSkin}!`);
+        }
+      }
+    }
+
+    function showMessage(text, duration=2000) {
+      messageEl.innerText = text;
+      messageEl.style.display = 'block';
+      setTimeout(() => { messageEl.style.display = 'none'; }, duration);
+    }
+
+    function resetGame() {
+      bird = { x: 80, y: HEIGHT/2, r: 20, velocity: 0 };
+      pipes = [];
+      trail = [];
+      score = 0;
+      seed = `${Date.now()}-${Math.floor(Math.random()*1000000)}`;
+      seedEl.innerText = seed;
+    }
+
+    function startGame() {
+      resetGame();
+      running = true;
+      // Kick off loop
+      cancelAnimationFrame(animationFrame);
+      loop();
+    }
+
+    function endGame() {
+      running = false;
+      playCrash();
+      // update best score
+      if(score > bestScore) {
+        bestScore = score;
+        localStorage.setItem('bestScore', bestScore);
+        bestEl.innerText = bestScore;
+        awardRandomSkin();
+      }
+      // compute hash for anti‑cheat
+      computeSeedHash().then(hash => {
+        // submit score to on‑chain stub
+        submitScoreToChain(score, seed, hash);
+      });
+      showMessage('Game Over! Press Enter to play again.', 3000);
+    }
+
+    function generatePipe() {
+      const topHeight = Math.random() * (HEIGHT - PIPE_GAP - 100) + 20;
+      const bottomY = topHeight + PIPE_GAP;
+      pipes.push({ x: WIDTH, topHeight: topHeight, bottomY: bottomY, passed: false });
+    }
+
+    function update() {
+      // Bird physics
+      bird.velocity += GRAVITY;
+      bird.y += bird.velocity;
+      // Add to trail
+      trail.push({ x: bird.x, y: bird.y });
+      if(trail.length > TRAIL_LENGTH) trail.shift();
+      // generate pipes periodically
+      if(pipes.length === 0 || pipes[pipes.length-1].x < WIDTH - 200) {
+        generatePipe();
+      }
+      // update pipes
+      pipes.forEach(pipe => {
+        pipe.x -= PIPE_SPEED;
+      });
+      // remove off‑screen pipes
+      while(pipes.length && pipes[0].x + PIPE_WIDTH < 0) {
+        pipes.shift();
+      }
+      // collision detection & scoring
+      pipes.forEach(pipe => {
+        // top pipe
+        if(bird.x + bird.r > pipe.x && bird.x - bird.r < pipe.x + PIPE_WIDTH) {
+          if(bird.y - bird.r < pipe.topHeight || bird.y + bird.r > pipe.bottomY) {
+            running = false;
+          }
+        }
+        // score
+        if(!pipe.passed && pipe.x + PIPE_WIDTH < bird.x - bird.r) {
+          pipe.passed = true;
+          score++;
+          playScore();
+        }
+      });
+      // ground or ceiling collision
+      if(bird.y + bird.r > HEIGHT || bird.y - bird.r < 0) {
+        running = false;
+      }
+    }
+
+    function draw() {
+      // background sky gradient
+      const grad = ctx.createLinearGradient(0,0,0,HEIGHT);
+      grad.addColorStop(0, '#87CEEB');
+      grad.addColorStop(1, '#E0F7FA');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0,0,WIDTH,HEIGHT);
+      // draw trail
+      trail.forEach((pt, idx) => {
+        const alpha = (idx + 1) / TRAIL_LENGTH;
+        ctx.globalAlpha = alpha * 0.3;
+        ctx.drawImage(skins[currentSkinIndex], pt.x - bird.r, pt.y - bird.r, bird.r*2, bird.r*2);
+      });
+      ctx.globalAlpha = 1.0;
+      // draw pipes
+      ctx.fillStyle = '#27ae60';
+      pipes.forEach(pipe => {
+        // top
+        ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
+        // bottom
+        ctx.fillRect(pipe.x, pipe.bottomY, PIPE_WIDTH, HEIGHT - pipe.bottomY);
+      });
+      // draw bird (current skin)
+      ctx.drawImage(skins[currentSkinIndex], bird.x - bird.r, bird.y - bird.r, bird.r * 2, bird.r * 2);
+      // draw ground line
+      ctx.fillStyle = '#BBAA88';
+      ctx.fillRect(0, HEIGHT - 10, WIDTH, 10);
+      // update score display
+      scoreEl.innerText = score;
+    }
+
+    function loop() {
+      if(running) {
+        update();
+        draw();
+        if(!running) {
+          endGame();
+        }
+      }
+      animationFrame = requestAnimationFrame(loop);
+    }
+
+    function flap() {
+      if(!running) return;
+      bird.velocity = FLAP_STRENGTH;
+      playFlap();
+    }
+
+    // Event listeners
+    window.addEventListener('keydown', e => {
+      if(e.code === 'Space') {
+        e.preventDefault();
+        flap();
+      } else if(e.code === 'Enter') {
+        if(!running) startGame();
+      } else if(e.code === 'KeyR') {
+        resetGame();
+        draw();
+      }
+    });
+    // Mouse/touch for flap
+    canvas.addEventListener('pointerdown', flap);
+
+    // Anti‑cheat seed hash using WebCrypto API
+    async function computeSeedHash() {
+      const text = JSON.stringify({seed, score, pipes:pipes.map(p => ({top:p.topHeight,bottom:p.bottomY}))});
+      const encoder = new TextEncoder();
+      const data = encoder.encode(text);
+      const digest = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(digest));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // Stubbed on‑chain submission
+    function submitScoreToChain(score, seed, hash) {
+      // In production, this would send the score, seed and hash to the smart contract on the Abstract chain.
+      // Here we simply log it. Replace this function with actual on‑chain interaction as needed.
+      console.log('Submitting score to chain:', { score, seed, hash });
+    }
+
+    // Initial draw (before game starts)
+    resetGame();
+    draw();
+  </script>
+</body>
+</html>

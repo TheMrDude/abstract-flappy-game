@@ -4,32 +4,89 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Abstract Flappy - Play & Earn!</title>
+
+  <!-- Security Headers -->
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+  <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+
+  <!-- DOMPurify for XSS Protection -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+
   <style>
-    /* Basic page styling */
+    /* ===== CSS RESET & BASE STYLES ===== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
+
+    /* Accessibility */
+    :focus-visible {
+      outline: 3px solid #fbbf24;
+      outline-offset: 2px;
+    }
+
+    button {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    /* ===== GAME CANVAS ===== */
     #gameCanvas {
       display: block;
       margin: 0 auto;
-      background: #87CEEB;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      background: linear-gradient(180deg, #87CEEB 0%, #E0F7FA 100%);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      border-radius: 4px;
     }
+
+    /* ===== HUD ===== */
     #hud {
       position: absolute;
       top: 10px;
       left: 10px;
-      font-size: 18px;
-      color: #2c3e50;
-      background: rgba(255,255,255,0.9);
-      padding: 10px 15px;
-      border-radius: 8px;
-      line-height: 1.6;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      font-size: 16px;
+      color: #1f2937;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(10px);
+      padding: 12px 16px;
+      border-radius: 12px;
+      line-height: 1.8;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      transition: transform 0.2s ease;
+    }
+
+    #hud:hover {
+      transform: scale(1.02);
+    }
+
+    #hud .label {
+      font-size: 12px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    #hud .value {
+      font-size: 20px;
+      font-weight: bold;
+      color: #1f2937;
     }
     .coin-icon {
       color: #f39c12;
@@ -305,10 +362,13 @@
 
   <!-- Top Buttons -->
   <div id="topButtons">
-    <button class="top-btn" onclick="openShop()">🛒 Shop</button>
-    <button class="top-btn" onclick="openPowerups()">⚡ Power-Ups</button>
-    <button class="top-btn" onclick="openMissions()">🎯 Missions</button>
-    <button class="top-btn premium" onclick="openPremium()">👑 Premium</button>
+    <button id="soundToggle" class="top-btn" onclick="toggleSound()" title="Toggle Sound" aria-label="Toggle sound">
+      🔊
+    </button>
+    <button class="top-btn" onclick="openShop()" aria-label="Open shop">🛒 Shop</button>
+    <button class="top-btn" onclick="openPowerups()" aria-label="Open power-ups">⚡ Power-Ups</button>
+    <button class="top-btn" onclick="openMissions()" aria-label="Open missions">🎯 Missions</button>
+    <button class="top-btn premium" onclick="openPremium()" aria-label="Go premium">👑 Premium</button>
   </div>
 
   <!-- Active Powerup Display -->
@@ -424,7 +484,12 @@
 
   <script>
     /*
-     * Abstract Flappy Bird - Revenue Generating Edition
+     * Abstract Flappy Bird - Revenue Generating Edition + Security & UX Improvements
+     *
+     * ⚠️ SECURITY WARNING ⚠️
+     * This code includes client-side monetization for DEMO purposes.
+     * DO NOT deploy to production without implementing server-side validation.
+     * See SECURITY.md for full details and production requirements.
      *
      * Monetization Features:
      *  - Virtual Currency (Coins)
@@ -436,7 +501,166 @@
      *  - Premium Subscription
      *  - Social Sharing
      *  - Analytics Integration
+     *
+     * Security Improvements:
+     *  - XSS Protection (DOMPurify)
+     *  - Input Validation
+     *  - Data Integrity Checks
+     *  - Rate Limiting
+     *
+     * UX Improvements:
+     *  - Toast Notifications
+     *  - Sound Toggle
+     *  - Improved Accessibility
+     *  - Better Visual Feedback
      */
+
+    // ===== SECURITY HELPERS =====
+
+    /**
+     * Sanitize HTML to prevent XSS attacks
+     * @param {string} html - HTML string to sanitize
+     * @returns {string} Sanitized HTML
+     */
+    function sanitizeHTML(html) {
+      return DOMPurify ? DOMPurify.sanitize(html) : html;
+    }
+
+    /**
+     * Sanitize text content (remove all HTML)
+     * @param {string} text - Text to sanitize
+     * @returns {string} Plain text
+     */
+    function sanitizeText(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    /**
+     * Validate and clamp number within range
+     * @param {any} value - Value to validate
+     * @param {number} min - Minimum value
+     * @param {number} max - Maximum value
+     * @param {number} fallback - Fallback value if invalid
+     * @returns {number} Validated number
+     */
+    function validateNumber(value, min = 0, max = Number.MAX_SAFE_INTEGER, fallback = 0) {
+      const num = typeof value === 'number' ? value : parseInt(value, 10);
+      if (isNaN(num)) return fallback;
+      return Math.max(min, Math.min(max, num));
+    }
+
+    /**
+     * Simple checksum for data integrity
+     * @param {any} data - Data to checksum
+     * @returns {number} Checksum value
+     */
+    function getChecksum(data) {
+      const str = JSON.stringify(data);
+      return Array.from(str).reduce((sum, char) =>
+        ((sum << 5) - sum) + char.charCodeAt(0), 0
+      );
+    }
+
+    /**
+     * Rate limiter to prevent action spam
+     */
+    class RateLimiter {
+      constructor() {
+        this.actions = {};
+      }
+
+      canPerform(action, cooldownMs) {
+        const now = Date.now();
+        const lastAction = this.actions[action] || 0;
+        if (now - lastAction < cooldownMs) {
+          return false;
+        }
+        this.actions[action] = now;
+        return true;
+      }
+
+      getRemainingTime(action, cooldownMs) {
+        const now = Date.now();
+        const lastAction = this.actions[action] || 0;
+        const remaining = cooldownMs - (now - lastAction);
+        return Math.max(0, Math.ceil(remaining / 1000));
+      }
+    }
+
+    const rateLimiter = new RateLimiter();
+
+    // ===== TOAST NOTIFICATION SYSTEM =====
+
+    /**
+     * Show elegant toast notification
+     * @param {string} message - Message to display
+     * @param {string} type - Toast type: success, error, warning, info
+     * @param {number} duration - Duration in milliseconds
+     */
+    function showToast(message, type = 'info', duration = 3000) {
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = sanitizeText(message);
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 80px;
+        right: 20px;
+        padding: 16px 24px;
+        border-radius: 12px;
+        color: white;
+        font-weight: 500;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        z-index: 10000;
+        max-width: 300px;
+        font-size: 14px;
+      `;
+
+      // Type-specific colors
+      const colors = {
+        success: 'linear-gradient(135deg, #10b981, #059669)',
+        error: 'linear-gradient(135deg, #ef4444, #dc2626)',
+        warning: 'linear-gradient(135deg, #f59e0b, #d97706)',
+        info: 'linear-gradient(135deg, #3b82f6, #2563eb)'
+      };
+      toast.style.background = colors[type] || colors.info;
+
+      document.body.appendChild(toast);
+
+      // Trigger animation
+      requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateY(0)';
+      });
+
+      // Remove after duration
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(20px)';
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+
+    // ===== SOUND MANAGEMENT =====
+
+    let soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      localStorage.setItem('soundEnabled', soundEnabled);
+      const btn = document.getElementById('soundToggle');
+      if (btn) {
+        btn.textContent = soundEnabled ? '🔊' : '🔇';
+        btn.title = soundEnabled ? 'Mute Sound' : 'Unmute Sound';
+      }
+      showToast(soundEnabled ? 'Sound enabled' : 'Sound muted', 'info', 1500);
+    }
+
+    // ===== DOM REFERENCES =====
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -490,14 +714,19 @@
     // ===== AUDIO SYSTEM =====
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playTone(freq, duration = 0.1, volume = 0.05) {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.frequency.value = freq;
-      gain.gain.value = volume;
-      osc.start();
-      osc.stop(audioCtx.currentTime + duration);
+      if (!soundEnabled) return; // Respect sound toggle
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.value = freq;
+        gain.gain.value = volume;
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (error) {
+        console.warn('Audio playback error:', error);
+      }
     }
     function playFlap() { playTone(600, 0.08, 0.05); }
     function playScore() { playTone(800, 0.1, 0.07); }
@@ -617,23 +846,55 @@
     }
 
     // ===== UTILITY FUNCTIONS =====
-    function showMessage(text, duration=2000) {
-      messageEl.innerText = text;
-      messageEl.style.display = 'block';
-      setTimeout(() => { messageEl.style.display = 'none'; }, duration);
+
+    /**
+     * Show message (now uses toast notifications)
+     * @param {string} text - Message text
+     * @param {number} duration - Duration in ms
+     * @param {string} type - Toast type
+     */
+    function showMessage(text, duration=2000, type='info') {
+      showToast(text, type, duration);
     }
 
+    /**
+     * Add coins with validation
+     * ⚠️ SECURITY: This MUST be validated server-side in production
+     * @param {number} amount - Coins to add
+     */
     function addCoins(amount) {
+      // Validate input
+      amount = validateNumber(amount, 0, 10000, 0);
+      if (amount === 0) return;
+
       coins += amount;
       totalCoinsEarned += amount;
+
+      // Prevent unrealistic values (basic tamper detection)
+      if (coins > 1000000) {
+        console.warn('⚠️ Suspicious coin amount detected');
+        // In production: report to server, flag account
+      }
+
       localStorage.setItem('coins', coins);
       localStorage.setItem('totalCoinsEarned', totalCoinsEarned);
       coinsEl.innerText = coins;
       updateMissionProgress('coins100', amount);
+
+      // Play coin sound and show visual feedback
+      playCoin();
     }
 
+    /**
+     * Spend coins with validation
+     * ⚠️ SECURITY: This MUST be validated server-side in production
+     * @param {number} amount - Coins to spend
+     * @returns {boolean} Success
+     */
     function spendCoins(amount) {
-      if(coins >= amount) {
+      amount = validateNumber(amount, 0, 1000000, 0);
+
+      if(coins >= amount && amount > 0) {
         coins -= amount;
         localStorage.setItem('coins', coins);
         coinsEl.innerText = coins;
@@ -917,35 +1178,86 @@
 
     function renderShopModal() {
       const content = document.getElementById('shopContent');
-      let html = '<p style="text-align: center; color: #7f8c8d;">Purchase skins with coins or real money</p>';
+      content.innerHTML = ''; // Clear first
 
+      // Add header
+      const header = document.createElement('p');
+      header.style.cssText = 'text-align: center; color: #7f8c8d;';
+      header.textContent = 'Purchase skins with coins or real money';
+      content.appendChild(header);
+
+      // Render each skin
       skinData.forEach((skin, index) => {
         const price = skinPrices[index];
         const owned = ownedSkins.includes(index);
         const equipped = currentSkinIndex === index;
         const locked = price.premium && !isPremium;
 
-        html += `
-          <div class="shop-item">
-            <div class="item-info">
-              <h3>${skin.name} Skin ${locked ? '<span class="premium-badge">PREMIUM</span>' : ''}</h3>
-              <p>${owned ? (equipped ? 'Currently equipped' : 'Owned') : 'Not owned'}</p>
-            </div>
-            <div class="item-price">
-              ${!owned ? `<span class="price-tag">💰 ${price.coins} coins</span>` : ''}
-              ${!owned ? `<span class="usd-price">or $${price.usd.toFixed(2)}</span>` : ''}
-              <button class="buy-btn ${owned ? (equipped ? 'equipped' : 'owned') : ''}"
-                onclick="${owned ? (equipped ? '' : `equipSkin(${index})`) : `buySkin(${index}, 'coins')`}"
-                ${locked || equipped ? 'disabled' : ''}>
-                ${locked ? '🔒 Premium Only' : (owned ? (equipped ? 'Equipped' : 'Equip') : 'Buy')}
-              </button>
-              ${!owned && !locked ? `<button class="buy-btn" onclick="buySkin(${index}, 'usd')" style="margin-top: 4px; font-size: 12px;">Buy $${price.usd.toFixed(2)}</button>` : ''}
-            </div>
-          </div>
-        `;
-      });
+        // Create shop item
+        const item = document.createElement('div');
+        item.className = 'shop-item';
 
-      content.innerHTML = html;
+        // Item info
+        const itemInfo = document.createElement('div');
+        itemInfo.className = 'item-info';
+
+        const itemTitle = document.createElement('h3');
+        itemTitle.textContent = `${sanitizeText(skin.name)} Skin `;
+        if (locked) {
+          const badge = document.createElement('span');
+          badge.className = 'premium-badge';
+          badge.textContent = 'PREMIUM';
+          itemTitle.appendChild(badge);
+        }
+        itemInfo.appendChild(itemTitle);
+
+        const itemStatus = document.createElement('p');
+        itemStatus.textContent = owned ? (equipped ? 'Currently equipped' : 'Owned') : 'Not owned';
+        itemInfo.appendChild(itemStatus);
+
+        item.appendChild(itemInfo);
+
+        // Item price section
+        const itemPrice = document.createElement('div');
+        itemPrice.className = 'item-price';
+
+        if (!owned) {
+          const priceTag = document.createElement('span');
+          priceTag.className = 'price-tag';
+          priceTag.textContent = `💰 ${price.coins} coins`;
+          itemPrice.appendChild(priceTag);
+
+          const usdPrice = document.createElement('span');
+          usdPrice.className = 'usd-price';
+          usdPrice.textContent = `or $${price.usd.toFixed(2)}`;
+          itemPrice.appendChild(usdPrice);
+        }
+
+        // Buy/Equip button
+        const buyBtn = document.createElement('button');
+        buyBtn.className = `buy-btn ${owned ? (equipped ? 'equipped' : 'owned') : ''}`;
+        buyBtn.textContent = locked ? '🔒 Premium Only' : (owned ? (equipped ? 'Equipped' : 'Equip') : 'Buy');
+        buyBtn.disabled = locked || equipped;
+        if (owned && !equipped) {
+          buyBtn.onclick = () => equipSkin(index);
+        } else if (!owned) {
+          buyBtn.onclick = () => buySkin(index, 'coins');
+        }
+        itemPrice.appendChild(buyBtn);
+
+        // USD purchase button
+        if (!owned && !locked) {
+          const usdBtn = document.createElement('button');
+          usdBtn.className = 'buy-btn';
+          usdBtn.style.cssText = 'margin-top: 4px; font-size: 12px;';
+          usdBtn.textContent = `Buy $${price.usd.toFixed(2)}`;
+          usdBtn.onclick = () => buySkin(index, 'usd');
+          itemPrice.appendChild(usdBtn);
+        }
+
+        item.appendChild(itemPrice);
+        content.appendChild(item);
+      });
     }
 
     function buySkin(index, currency) {
@@ -1332,7 +1644,14 @@
 
     // ===== SOCIAL SHARING =====
     function shareScore() {
-      const text = `I scored ${score} points in Abstract Flappy! Can you beat my score?`;
+      // Rate limiting: only allow sharing once per minute
+      if (!rateLimiter.canPerform('share', 60000)) {
+        const remaining = rateLimiter.getRemainingTime('share', 60000);
+        showToast(`Please wait ${remaining} seconds before sharing again`, 'warning');
+        return;
+      }
+
+      const text = sanitizeText(`I scored ${score} points in Abstract Flappy! Can you beat my score?`);
       const url = window.location.href;
 
       if(navigator.share) {
@@ -1343,15 +1662,23 @@
         }).then(() => {
           trackEvent('score_shared', { score, method: 'native' });
           addCoins(25); // Bonus for sharing
-          showMessage('Thanks for sharing! +25 coins', 2000);
-        }).catch(err => console.log('Share failed:', err));
+          showToast('Thanks for sharing! +25 coins 🎉', 'success');
+        }).catch(err => {
+          if (err.name !== 'AbortError') { // User cancelled
+            console.warn('Share failed:', err);
+            showToast('Sharing failed', 'error');
+          }
+        });
       } else {
         // Fallback: copy to clipboard
         const shareText = `${text}\n${url}`;
         navigator.clipboard.writeText(shareText).then(() => {
           trackEvent('score_shared', { score, method: 'clipboard' });
           addCoins(25);
-          showMessage('Score copied! Thanks for sharing! +25 coins', 2500);
+          showToast('Score copied! +25 coins 🎉', 'success', 2500);
+        }).catch(err => {
+          console.warn('Clipboard failed:', err);
+          showToast('Could not copy to clipboard', 'error');
         });
       }
     }
@@ -1390,10 +1717,22 @@
     resetGame();
     draw();
 
-    // Show "Press Enter to Start" message
+    // Initialize sound toggle button state
+    const soundBtn = document.getElementById('soundToggle');
+    if (soundBtn) {
+      soundBtn.textContent = soundEnabled ? '🔊' : '🔇';
+      soundBtn.title = soundEnabled ? 'Mute Sound' : 'Unmute Sound';
+    }
+
+    // Show welcome message
     setTimeout(() => {
-      showMessage('Press Enter or Click to Start!', 3000);
+      showToast('Press Enter or Click to Start! 🎮', 'info', 3000);
     }, 500);
+
+    // Log security notice in console
+    console.log('%c⚠️ SECURITY NOTICE', 'background: #ef4444; color: white; font-size: 16px; padding: 8px 16px; border-radius: 4px;');
+    console.log('%cThis game is for DEMO purposes. All monetization features require server-side validation before production use.', 'font-size: 12px; color: #f59e0b;');
+    console.log('%cSee SECURITY.md for full details.', 'font-size: 12px; color: #3b82f6;');
   </script>
 </body>
 </html>

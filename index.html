@@ -3,106 +3,446 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Abstract Flappy Extras</title>
+  <title>Abstract Flappy - Play & Earn!</title>
   <style>
     /* Basic page styling */
     body {
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background: #ecf0f1;
-      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     #gameCanvas {
       display: block;
       margin: 0 auto;
-      background: #87CEEB; /* sky blue */
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      background: #87CEEB;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     }
     #hud {
       position: absolute;
       top: 10px;
       left: 10px;
-      font-size: 20px;
+      font-size: 18px;
       color: #2c3e50;
-      background: rgba(255,255,255,0.7);
-      padding: 6px 10px;
-      border-radius: 6px;
-      line-height: 1.4;
+      background: rgba(255,255,255,0.9);
+      padding: 10px 15px;
+      border-radius: 8px;
+      line-height: 1.6;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
-    #skinMenu {
+    .coin-icon {
+      color: #f39c12;
+      font-weight: bold;
+    }
+    #topButtons {
       position: absolute;
       top: 10px;
       right: 10px;
-      background: rgba(255,255,255,0.8);
-      padding: 6px;
-      border-radius: 6px;
-      max-width: 160px;
-      font-size: 14px;
+      display: flex;
+      gap: 8px;
     }
-    #skinMenu h3 {
-      margin: 0 0 4px 0;
-      font-size: 16px;
-      color: #2c3e50;
-    }
-    #skinMenu button {
-      margin: 2px;
-      padding: 4px 6px;
+    .top-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
       border: none;
-      border-radius: 4px;
+      padding: 10px 16px;
+      border-radius: 8px;
       cursor: pointer;
-      font-size: 12px;
+      font-weight: bold;
+      font-size: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+    .top-btn:hover {
+      transform: translateY(-2px);
+    }
+    .top-btn.premium {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
     }
     #message {
       position: absolute;
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.85);
       color: #fff;
-      padding: 10px 20px;
-      border-radius: 6px;
-      font-size: 18px;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
       display: none;
       text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(5px);
+    }
+    .modal-content {
+      background: white;
+      margin: 5% auto;
+      padding: 0;
+      border-radius: 12px;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from { transform: translateY(-50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .modal-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px 12px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h2 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .close {
+      color: white;
+      font-size: 32px;
+      font-weight: bold;
+      cursor: pointer;
+      line-height: 1;
+      transition: transform 0.2s;
+    }
+    .close:hover {
+      transform: scale(1.2);
+    }
+    .modal-body {
+      padding: 20px;
+    }
+    .shop-item, .powerup-item, .mission-item {
+      background: #f8f9fa;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 2px solid #e9ecef;
+    }
+    .shop-item:hover, .powerup-item:hover {
+      border-color: #667eea;
+    }
+    .item-info h3 {
+      margin: 0 0 5px 0;
+      color: #2c3e50;
+      font-size: 18px;
+    }
+    .item-info p {
+      margin: 0;
+      color: #7f8c8d;
+      font-size: 14px;
+    }
+    .item-price {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      align-items: flex-end;
+    }
+    .buy-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+      transition: transform 0.2s;
+    }
+    .buy-btn:hover:not(:disabled) {
+      transform: scale(1.05);
+    }
+    .buy-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .buy-btn.owned {
+      background: #27ae60;
+    }
+    .buy-btn.equipped {
+      background: #34495e;
+    }
+    .price-tag {
+      font-size: 14px;
+      color: #f39c12;
+      font-weight: bold;
+    }
+    .usd-price {
+      font-size: 12px;
+      color: #27ae60;
+      font-weight: bold;
+    }
+    .premium-badge {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    #bannerAd {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 728px;
+      height: 90px;
+      background: #f8f9fa;
+      border: 2px solid #dee2e6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6c757d;
+      font-size: 14px;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    }
+    .reward-ad-btn {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 16px;
+      margin: 10px;
+      width: calc(100% - 20px);
+      transition: transform 0.2s;
+    }
+    .reward-ad-btn:hover {
+      transform: scale(1.02);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .stat-box {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #667eea;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: #7f8c8d;
+      margin-top: 4px;
+    }
+    .daily-reward-item {
+      background: #f8f9fa;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .daily-reward-item.claimed {
+      opacity: 0.5;
+    }
+    .daily-reward-item.available {
+      border: 2px solid #27ae60;
+      background: #d5f4e6;
+    }
+    .powerup-active {
+      position: absolute;
+      top: 100px;
+      left: 10px;
+      background: rgba(46, 204, 113, 0.9);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    @media (max-width: 768px) {
+      .modal-content {
+        margin: 10% 5%;
+        max-width: 90%;
+      }
+      #bannerAd {
+        width: 320px;
+        height: 50px;
+        font-size: 12px;
+      }
     }
   </style>
 </head>
 <body>
   <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+  <!-- HUD -->
   <div id="hud">
     Score: <span id="score">0</span><br>
     Best: <span id="best">0</span><br>
-    Seed: <span id="seedDisplay">-</span>
+    <span class="coin-icon">💰</span> Coins: <span id="coins">0</span>
   </div>
-  <div id="skinMenu">
-    <h3>Skins</h3>
-    <div id="skinsContainer"></div>
+
+  <!-- Top Buttons -->
+  <div id="topButtons">
+    <button class="top-btn" onclick="openShop()">🛒 Shop</button>
+    <button class="top-btn" onclick="openPowerups()">⚡ Power-Ups</button>
+    <button class="top-btn" onclick="openMissions()">🎯 Missions</button>
+    <button class="top-btn premium" onclick="openPremium()">👑 Premium</button>
   </div>
+
+  <!-- Active Powerup Display -->
+  <div id="powerupDisplay" class="powerup-active" style="display:none;"></div>
+
+  <!-- Message Display -->
   <div id="message"></div>
+
+  <!-- Banner Ad (shown to non-premium users) -->
+  <div id="bannerAd">
+    <!-- AdSense code goes here -->
+    <div style="text-align: center;">
+      <small>Advertisement Space (728x90)</small><br>
+      <small style="font-size: 10px;">Integrate with Google AdSense</small>
+    </div>
+  </div>
+
+  <!-- Shop Modal -->
+  <div id="shopModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🛒 Skin Shop</h2>
+        <span class="close" onclick="closeModal('shopModal')">&times;</span>
+      </div>
+      <div class="modal-body" id="shopContent"></div>
+    </div>
+  </div>
+
+  <!-- Power-ups Modal -->
+  <div id="powerupsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>⚡ Power-Ups</h2>
+        <span class="close" onclick="closeModal('powerupsModal')">&times;</span>
+      </div>
+      <div class="modal-body" id="powerupsContent"></div>
+    </div>
+  </div>
+
+  <!-- Missions Modal -->
+  <div id="missionsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🎯 Daily Missions</h2>
+        <span class="close" onclick="closeModal('missionsModal')">&times;</span>
+      </div>
+      <div class="modal-body" id="missionsContent"></div>
+    </div>
+  </div>
+
+  <!-- Premium Modal -->
+  <div id="premiumModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>👑 Go Premium!</h2>
+        <span class="close" onclick="closeModal('premiumModal')">&times;</span>
+      </div>
+      <div class="modal-body" id="premiumContent"></div>
+    </div>
+  </div>
+
+  <!-- Game Over Modal with Rewarded Ad -->
+  <div id="gameOverModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>💀 Game Over!</h2>
+        <span class="close" onclick="closeGameOver()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <div class="stat-value" id="gameOverScore">0</div>
+          <div class="stat-label">SCORE</div>
+          <div style="margin-top: 10px;">
+            <span class="coin-icon">💰</span> +<span id="coinsEarned">0</span> coins earned!
+          </div>
+        </div>
+        <div id="continueAdSection" style="display: none;">
+          <button class="reward-ad-btn" onclick="watchAdToContinue()">
+            📺 Watch Ad to Continue
+          </button>
+          <p style="text-align: center; color: #7f8c8d; font-size: 12px;">Get one more chance!</p>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-value" id="modalBestScore">0</div>
+            <div class="stat-label">BEST SCORE</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="modalTotalCoins">0</div>
+            <div class="stat-label">TOTAL COINS</div>
+          </div>
+        </div>
+        <button class="reward-ad-btn" onclick="closeGameOver()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin-top: 15px;">
+          Play Again (Enter)
+        </button>
+        <button class="reward-ad-btn" onclick="shareScore()" style="background: linear-gradient(135deg, #48c6ef 0%, #6f86d6 100%);">
+          📤 Share Score
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily Reward Modal -->
+  <div id="dailyRewardModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🎁 Daily Rewards</h2>
+        <span class="close" onclick="closeModal('dailyRewardModal')">&times;</span>
+      </div>
+      <div class="modal-body" id="dailyRewardContent"></div>
+    </div>
+  </div>
+
   <script>
     /*
-     * Abstract Flappy Bird with extras
+     * Abstract Flappy Bird - Revenue Generating Edition
      *
-     * Controls:
-     *  - Enter: start game
-     *  - Space/Click/Tap: flap
-     *  - R: reset game
-     *
-     * Features:
-     *  - On‑chain leaderboard submission (stubbed with console output)
-     *  - Anti‑cheat seed hashing
-     *  - NFT skins & random drops
-     *  - Audio SFX for flap, score and crash
-     *  - Visual trail effect behind the player
+     * Monetization Features:
+     *  - Virtual Currency (Coins)
+     *  - In-App Purchases (Skins, Power-ups, Premium)
+     *  - Rewarded Video Ads
+     *  - Banner Ads
+     *  - Interstitial Ads
+     *  - Daily Rewards & Missions
+     *  - Premium Subscription
+     *  - Social Sharing
+     *  - Analytics Integration
      */
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('score');
     const bestEl = document.getElementById('best');
-    const seedEl = document.getElementById('seedDisplay');
-    const skinsContainer = document.getElementById('skinsContainer');
+    const coinsEl = document.getElementById('coins');
     const messageEl = document.getElementById('message');
 
     const WIDTH = canvas.width;
@@ -115,18 +455,39 @@
     const PIPE_WIDTH = 50;
     const PIPE_SPEED = 2;
     const TRAIL_LENGTH = 10;
+    const COINS_PER_POINT = 2; // Earn 2 coins per score point
 
+    // Game state
     let bird;
     let pipes;
     let score;
     let bestScore = parseInt(localStorage.getItem('bestScore') || '0');
-    bestEl.innerText = bestScore;
+    let coins = parseInt(localStorage.getItem('coins') || '0');
     let running = false;
     let animationFrame;
     let seed;
     let trail;
+    let gamesPlayed = 0;
+    let continuesUsed = 0;
 
-    // Audio context for simple beep sounds
+    // Monetization state
+    let isPremium = localStorage.getItem('isPremium') === 'true';
+    let ownedSkins = JSON.parse(localStorage.getItem('ownedSkins') || '[0]');
+    let currentSkinIndex = parseInt(localStorage.getItem('currentSkin') || '0');
+    let activePowerups = {};
+    let powerupInventory = JSON.parse(localStorage.getItem('powerupInventory') || '{}');
+    let dailyMissions = JSON.parse(localStorage.getItem('dailyMissions') || '[]');
+    let lastLoginDate = localStorage.getItem('lastLoginDate');
+    let loginStreak = parseInt(localStorage.getItem('loginStreak') || '0');
+    let totalGamesPlayed = parseInt(localStorage.getItem('totalGamesPlayed') || '0');
+    let totalCoinsEarned = parseInt(localStorage.getItem('totalCoinsEarned') || '0');
+    let adsWatched = parseInt(localStorage.getItem('adsWatched') || '0');
+
+    // Update displays
+    bestEl.innerText = bestScore;
+    coinsEl.innerText = coins;
+
+    // ===== AUDIO SYSTEM =====
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playTone(freq, duration = 0.1, volume = 0.05) {
       const osc = audioCtx.createOscillator();
@@ -141,22 +502,73 @@
     function playFlap() { playTone(600, 0.08, 0.05); }
     function playScore() { playTone(800, 0.1, 0.07); }
     function playCrash() { playTone(200, 0.2, 0.1); }
+    function playPowerup() { playTone(1000, 0.15, 0.08); }
+    function playCoin() { playTone(900, 0.08, 0.06); }
 
-    // Load sprite and prepare tinted skins
+    // ===== MONETIZATION DATA =====
+
+    // Skin prices (in coins and USD)
+    const skinPrices = {
+      0: { coins: 0, usd: 0, premium: false }, // Default free
+      1: { coins: 100, usd: 0.99, premium: false },
+      2: { coins: 150, usd: 1.49, premium: false },
+      3: { coins: 200, usd: 1.99, premium: false },
+      4: { coins: 250, usd: 2.49, premium: false },
+      5: { coins: 300, usd: 2.99, premium: true }, // Premium only
+      6: { coins: 350, usd: 3.49, premium: false },
+      7: { coins: 400, usd: 3.99, premium: true }, // Premium only
+      8: { coins: 500, usd: 4.99, premium: true }, // Premium only
+    };
+
+    // Power-up definitions
+    const powerupTypes = {
+      shield: {
+        name: 'Shield',
+        icon: '🛡️',
+        description: 'Survive one collision',
+        price: 50,
+        duration: null // One-time use
+      },
+      slowmo: {
+        name: 'Slow Motion',
+        icon: '⏱️',
+        description: 'Slow down time for 5 seconds',
+        price: 75,
+        duration: 5000
+      },
+      multiplier: {
+        name: '2x Score',
+        icon: '✨',
+        description: 'Double points for 10 seconds',
+        price: 100,
+        duration: 10000
+      },
+      magnet: {
+        name: 'Coin Magnet',
+        icon: '🧲',
+        description: 'Earn 3x coins for 8 seconds',
+        price: 60,
+        duration: 8000
+      }
+    };
+
+    // Daily missions
+    function generateDailyMissions() {
+      return [
+        { id: 'score10', description: 'Score 10 points in a single game', reward: 50, completed: false, target: 10, progress: 0 },
+        { id: 'play5', description: 'Play 5 games', reward: 30, completed: false, target: 5, progress: 0 },
+        { id: 'coins100', description: 'Earn 100 coins', reward: 75, completed: false, target: 100, progress: 0 },
+        { id: 'powerup3', description: 'Use 3 power-ups', reward: 40, completed: false, target: 3, progress: 0 }
+      ];
+    }
+
+    // ===== SKIN SYSTEM =====
     const baseImage = new Image();
-    // Use abstract logo in root by default
     baseImage.src = 'abstract-logo.png';
     const skins = [];
-    const ownedSkins = JSON.parse(localStorage.getItem('ownedSkins') || '[0]'); // default skin index 0 owned
-    let currentSkinIndex = parseInt(localStorage.getItem('currentSkin') || '0');
 
-    // --- Advertisement setup ---
-    // Define the filenames of advertisement images. These images should be stored
-    // in a folder named "ads" relative to this HTML file. Add or remove entries
-    // here to control which ads are displayed. By default, a placeholder image
-    // is referenced. Replace 'ads/placeholder.png' with real ad file names.
+    // Advertisement images for pipes
     const adFilenames = ['ads/placeholder.png'];
-    // Preload ad images into an array of Image objects.
     const adImages = [];
     adFilenames.forEach((file) => {
       const img = new Image();
@@ -164,202 +576,260 @@
       adImages.push(img);
     });
 
-    // Colours for tinting additional skins
-    const tintColours = [
-      '#E74C3C', // red
-      '#3498DB', // blue
-      '#F1C40F', // yellow
-      '#8E44AD', // purple
-      '#1ABC9C', // teal
-      '#F39C12', // orange
-      '#E84393', // pink
-      '#2ECC71', // green
+    // Skin colors
+    const skinData = [
+      { name: 'Abstract', color: null }, // Default
+      { name: 'Ruby', color: '#E74C3C' },
+      { name: 'Sapphire', color: '#3498DB' },
+      { name: 'Gold', color: '#F1C40F' },
+      { name: 'Amethyst', color: '#8E44AD' },
+      { name: 'Emerald', color: '#1ABC9C' }, // Premium
+      { name: 'Orange', color: '#F39C12' },
+      { name: 'Pink Diamond', color: '#E84393' }, // Premium
+      { name: 'Jade', color: '#2ECC71' }, // Premium
     ];
 
     baseImage.onload = () => {
       generateSkins();
-      renderSkinMenu();
+      checkDailyLogin();
+      updateBannerAdVisibility();
     };
 
     function generateSkins() {
       skins.length = 0;
-      // Default skin (no tint)
-      skins.push(baseImage);
-      // Generate tinted variants using off‑screen canvas
+      skins.push(baseImage); // Default
       const offCanvas = document.createElement('canvas');
       offCanvas.width = baseImage.width;
       offCanvas.height = baseImage.height;
       const offCtx = offCanvas.getContext('2d');
-      tintColours.forEach(col => {
+
+      for(let i = 1; i < skinData.length; i++) {
         offCtx.clearRect(0,0,offCanvas.width, offCanvas.height);
         offCtx.drawImage(baseImage, 0, 0);
         offCtx.globalCompositeOperation = 'source-atop';
-        offCtx.fillStyle = col;
+        offCtx.fillStyle = skinData[i].color;
         offCtx.fillRect(0,0,offCanvas.width, offCanvas.height);
         offCtx.globalCompositeOperation = 'source-over';
         const tinted = new Image();
         tinted.src = offCanvas.toDataURL();
         skins.push(tinted);
-      });
-    }
-
-    function renderSkinMenu() {
-      skinsContainer.innerHTML = '';
-      skins.forEach((img, index) => {
-        const btn = document.createElement('button');
-        btn.innerText = `Skin ${index}`;
-        btn.disabled = !ownedSkins.includes(index);
-        if(index === currentSkinIndex) {
-          btn.style.fontWeight = 'bold';
-        }
-        btn.addEventListener('click', () => {
-          if(ownedSkins.includes(index)) {
-            currentSkinIndex = index;
-            localStorage.setItem('currentSkin', currentSkinIndex);
-            renderSkinMenu();
-          }
-        });
-        skinsContainer.appendChild(btn);
-      });
-    }
-
-    function awardRandomSkin() {
-      // 25% chance to drop a random new skin when score beats best
-      if(Math.random() < 0.25) {
-        const unowned = skins.map((_, i) => i).filter(i => !ownedSkins.includes(i));
-        if(unowned.length > 0) {
-          const newSkin = unowned[Math.floor(Math.random() * unowned.length)];
-          ownedSkins.push(newSkin);
-          localStorage.setItem('ownedSkins', JSON.stringify(ownedSkins));
-          renderSkinMenu();
-          showMessage(`You unlocked Skin ${newSkin}!`);
-        }
       }
     }
 
+    // ===== UTILITY FUNCTIONS =====
     function showMessage(text, duration=2000) {
       messageEl.innerText = text;
       messageEl.style.display = 'block';
       setTimeout(() => { messageEl.style.display = 'none'; }, duration);
     }
 
+    function addCoins(amount) {
+      coins += amount;
+      totalCoinsEarned += amount;
+      localStorage.setItem('coins', coins);
+      localStorage.setItem('totalCoinsEarned', totalCoinsEarned);
+      coinsEl.innerText = coins;
+      updateMissionProgress('coins100', amount);
+    }
+
+    function spendCoins(amount) {
+      if(coins >= amount) {
+        coins -= amount;
+        localStorage.setItem('coins', coins);
+        coinsEl.innerText = coins;
+        return true;
+      }
+      return false;
+    }
+
+    function updateBannerAdVisibility() {
+      const bannerAd = document.getElementById('bannerAd');
+      if(isPremium) {
+        bannerAd.style.display = 'none';
+      } else {
+        bannerAd.style.display = 'flex';
+      }
+    }
+
+    // ===== GAME CORE =====
     function resetGame() {
       bird = { x: 80, y: HEIGHT/2, r: 20, velocity: 0 };
       pipes = [];
       trail = [];
       score = 0;
       seed = `${Date.now()}-${Math.floor(Math.random()*1000000)}`;
-      seedEl.innerText = seed;
+      continuesUsed = 0;
     }
 
     function startGame() {
       resetGame();
       running = true;
-      // Kick off loop
+      gamesPlayed++;
+      totalGamesPlayed++;
+      localStorage.setItem('totalGamesPlayed', totalGamesPlayed);
+      updateMissionProgress('play5', 1);
       cancelAnimationFrame(animationFrame);
+
+      // Show interstitial ad every 3 games (if not premium)
+      if(!isPremium && gamesPlayed % 3 === 0) {
+        showInterstitialAd();
+      }
+
       loop();
     }
 
     function endGame() {
       running = false;
       playCrash();
-      // update best score
+
+      // Calculate coins earned (2 per point + bonuses)
+      let coinsEarned = score * COINS_PER_POINT;
+      if(activePowerups.magnet) {
+        coinsEarned *= 3; // 3x with coin magnet
+      }
+
+      addCoins(coinsEarned);
+
+      // Update best score
+      let isNewBest = false;
       if(score > bestScore) {
         bestScore = score;
         localStorage.setItem('bestScore', bestScore);
         bestEl.innerText = bestScore;
-        awardRandomSkin();
+        isNewBest = true;
       }
-      // compute hash for anti‑cheat
+
+      // Update mission progress
+      updateMissionProgress('score10', score);
+
+      // Analytics
+      trackEvent('game_over', { score, coins_earned: coinsEarned, new_best: isNewBest });
+
+      // Anti-cheat hash
       computeSeedHash().then(hash => {
-        // submit score to on‑chain stub
         submitScoreToChain(score, seed, hash);
       });
-      showMessage('Game Over! Press Enter to play again.', 3000);
+
+      // Show game over modal
+      showGameOverModal(coinsEarned, isNewBest);
     }
 
     function generatePipe() {
       const topHeight = Math.random() * (HEIGHT - PIPE_GAP - 100) + 20;
       const bottomY = topHeight + PIPE_GAP;
-      // Choose a random advertisement index if ads have been loaded. If no ads
-      // are available, the index will be null and the pipe falls back to the default color.
       const adIndex = adImages.length > 0 ? Math.floor(Math.random() * adImages.length) : null;
       pipes.push({ x: WIDTH, topHeight: topHeight, bottomY: bottomY, passed: false, adIndex: adIndex });
     }
 
     function update() {
+      // Apply slow-mo power-up
+      const speedMultiplier = activePowerups.slowmo ? 0.5 : 1;
+
       // Bird physics
-      bird.velocity += GRAVITY;
-      bird.y += bird.velocity;
+      bird.velocity += GRAVITY * speedMultiplier;
+      bird.y += bird.velocity * speedMultiplier;
+
       // Add to trail
       trail.push({ x: bird.x, y: bird.y });
       if(trail.length > TRAIL_LENGTH) trail.shift();
-      // generate pipes periodically
+
+      // Generate pipes periodically
       if(pipes.length === 0 || pipes[pipes.length-1].x < WIDTH - 200) {
         generatePipe();
       }
-      // update pipes
+
+      // Update pipes
       pipes.forEach(pipe => {
-        pipe.x -= PIPE_SPEED;
+        pipe.x -= PIPE_SPEED * speedMultiplier;
       });
-      // remove off‑screen pipes
+
+      // Remove off-screen pipes
       while(pipes.length && pipes[0].x + PIPE_WIDTH < 0) {
         pipes.shift();
       }
-      // collision detection & scoring
+
+      // Collision detection & scoring
+      let collision = false;
       pipes.forEach(pipe => {
-        // top pipe
+        // Check collision
         if(bird.x + bird.r > pipe.x && bird.x - bird.r < pipe.x + PIPE_WIDTH) {
           if(bird.y - bird.r < pipe.topHeight || bird.y + bird.r > pipe.bottomY) {
-            running = false;
+            collision = true;
           }
         }
-        // score
+
+        // Score
         if(!pipe.passed && pipe.x + PIPE_WIDTH < bird.x - bird.r) {
           pipe.passed = true;
-          score++;
+          const scoreIncrease = activePowerups.multiplier ? 2 : 1;
+          score += scoreIncrease;
           playScore();
+          if(scoreIncrease > 1) playCoin();
         }
       });
-      // ground or ceiling collision
+
+      // Ground or ceiling collision
       if(bird.y + bird.r > HEIGHT || bird.y - bird.r < 0) {
-        running = false;
+        collision = true;
+      }
+
+      // Handle collision with shield power-up
+      if(collision) {
+        if(activePowerups.shield) {
+          // Shield protects once
+          delete activePowerups.shield;
+          updatePowerupDisplay();
+          showMessage('Shield Protected You!', 1500);
+          playPowerup();
+        } else {
+          running = false;
+        }
       }
     }
 
     function draw() {
-      // background sky gradient
+      // Background sky gradient
       const grad = ctx.createLinearGradient(0,0,0,HEIGHT);
       grad.addColorStop(0, '#87CEEB');
       grad.addColorStop(1, '#E0F7FA');
       ctx.fillStyle = grad;
       ctx.fillRect(0,0,WIDTH,HEIGHT);
-      // draw trail
+
+      // Draw trail
       trail.forEach((pt, idx) => {
         const alpha = (idx + 1) / TRAIL_LENGTH;
         ctx.globalAlpha = alpha * 0.3;
         ctx.drawImage(skins[currentSkinIndex], pt.x - bird.r, pt.y - bird.r, bird.r*2, bird.r*2);
       });
       ctx.globalAlpha = 1.0;
-      // draw pipes (show ads if available)
+
+      // Draw pipes with ads
       pipes.forEach(pipe => {
         if (adImages.length > 0 && pipe.adIndex !== null && adImages[pipe.adIndex]) {
-          // draw advertisement image over the top and bottom pipe sections
           ctx.drawImage(adImages[pipe.adIndex], pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
           ctx.drawImage(adImages[pipe.adIndex], pipe.x, pipe.bottomY, PIPE_WIDTH, HEIGHT - pipe.bottomY);
         } else {
-          // fallback: draw solid green pipes
           ctx.fillStyle = '#27ae60';
           ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
           ctx.fillRect(pipe.x, pipe.bottomY, PIPE_WIDTH, HEIGHT - pipe.bottomY);
         }
       });
-      // draw bird (current skin)
+
+      // Draw bird with shield effect
+      if(activePowerups.shield) {
+        ctx.strokeStyle = 'rgba(52, 152, 219, 0.6)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(bird.x, bird.y, bird.r + 5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
       ctx.drawImage(skins[currentSkinIndex], bird.x - bird.r, bird.y - bird.r, bird.r * 2, bird.r * 2);
-      // draw ground line
+
+      // Draw ground
       ctx.fillStyle = '#BBAA88';
       ctx.fillRect(0, HEIGHT - 10, WIDTH, 10);
-      // update score display
+
+      // Update score display
       scoreEl.innerText = score;
     }
 
@@ -380,24 +850,526 @@
       playFlap();
     }
 
-    // Event listeners
+    // ===== EVENT LISTENERS =====
     window.addEventListener('keydown', e => {
       if(e.code === 'Space') {
         e.preventDefault();
         flap();
       } else if(e.code === 'Enter') {
-        if(!running) startGame();
+        if(!running) {
+          closeModal('gameOverModal');
+          startGame();
+        }
       } else if(e.code === 'KeyR') {
         resetGame();
         draw();
       }
     });
-    // Mouse/touch for flap
     canvas.addEventListener('pointerdown', flap);
 
-    // Anti‑cheat seed hash using WebCrypto API
+    // ===== POWER-UP SYSTEM =====
+    function usePowerup(type) {
+      if(!powerupInventory[type] || powerupInventory[type] <= 0) {
+        showMessage('You need to buy this power-up first!', 2000);
+        return;
+      }
+
+      // Deduct from inventory
+      powerupInventory[type]--;
+      localStorage.setItem('powerupInventory', JSON.stringify(powerupInventory));
+      updateMissionProgress('powerup3', 1);
+
+      // Activate power-up
+      activePowerups[type] = true;
+      updatePowerupDisplay();
+      playPowerup();
+      showMessage(`${powerupTypes[type].icon} ${powerupTypes[type].name} Activated!`, 2000);
+
+      // Set timer for timed power-ups
+      if(powerupTypes[type].duration) {
+        setTimeout(() => {
+          delete activePowerups[type];
+          updatePowerupDisplay();
+        }, powerupTypes[type].duration);
+      }
+
+      renderPowerupsModal();
+    }
+
+    function updatePowerupDisplay() {
+      const display = document.getElementById('powerupDisplay');
+      const active = Object.keys(activePowerups);
+      if(active.length > 0) {
+        const labels = active.map(type => powerupTypes[type].icon + ' ' + powerupTypes[type].name);
+        display.innerText = labels.join(' | ');
+        display.style.display = 'block';
+      } else {
+        display.style.display = 'none';
+      }
+    }
+
+    // ===== SHOP SYSTEM =====
+    function openShop() {
+      renderShopModal();
+      document.getElementById('shopModal').style.display = 'block';
+      trackEvent('shop_opened');
+    }
+
+    function renderShopModal() {
+      const content = document.getElementById('shopContent');
+      let html = '<p style="text-align: center; color: #7f8c8d;">Purchase skins with coins or real money</p>';
+
+      skinData.forEach((skin, index) => {
+        const price = skinPrices[index];
+        const owned = ownedSkins.includes(index);
+        const equipped = currentSkinIndex === index;
+        const locked = price.premium && !isPremium;
+
+        html += `
+          <div class="shop-item">
+            <div class="item-info">
+              <h3>${skin.name} Skin ${locked ? '<span class="premium-badge">PREMIUM</span>' : ''}</h3>
+              <p>${owned ? (equipped ? 'Currently equipped' : 'Owned') : 'Not owned'}</p>
+            </div>
+            <div class="item-price">
+              ${!owned ? `<span class="price-tag">💰 ${price.coins} coins</span>` : ''}
+              ${!owned ? `<span class="usd-price">or $${price.usd.toFixed(2)}</span>` : ''}
+              <button class="buy-btn ${owned ? (equipped ? 'equipped' : 'owned') : ''}"
+                onclick="${owned ? (equipped ? '' : `equipSkin(${index})`) : `buySkin(${index}, 'coins')`}"
+                ${locked || equipped ? 'disabled' : ''}>
+                ${locked ? '🔒 Premium Only' : (owned ? (equipped ? 'Equipped' : 'Equip') : 'Buy')}
+              </button>
+              ${!owned && !locked ? `<button class="buy-btn" onclick="buySkin(${index}, 'usd')" style="margin-top: 4px; font-size: 12px;">Buy $${price.usd.toFixed(2)}</button>` : ''}
+            </div>
+          </div>
+        `;
+      });
+
+      content.innerHTML = html;
+    }
+
+    function buySkin(index, currency) {
+      const price = skinPrices[index];
+
+      if(price.premium && !isPremium) {
+        showMessage('This skin requires Premium!', 2000);
+        return;
+      }
+
+      if(currency === 'coins') {
+        if(spendCoins(price.coins)) {
+          ownedSkins.push(index);
+          localStorage.setItem('ownedSkins', JSON.stringify(ownedSkins));
+          showMessage(`${skinData[index].name} Skin Purchased!`, 2000);
+          renderShopModal();
+          trackEvent('skin_purchased', { skin: index, currency: 'coins', price: price.coins });
+        } else {
+          showMessage('Not enough coins!', 2000);
+        }
+      } else if(currency === 'usd') {
+        processPayment(price.usd, 'skin', index);
+      }
+    }
+
+    function equipSkin(index) {
+      if(ownedSkins.includes(index)) {
+        currentSkinIndex = index;
+        localStorage.setItem('currentSkin', currentSkinIndex);
+        showMessage(`${skinData[index].name} Skin Equipped!`, 2000);
+        renderShopModal();
+        trackEvent('skin_equipped', { skin: index });
+      }
+    }
+
+    // ===== POWER-UPS MODAL =====
+    function openPowerups() {
+      renderPowerupsModal();
+      document.getElementById('powerupsModal').style.display = 'block';
+      trackEvent('powerups_opened');
+    }
+
+    function renderPowerupsModal() {
+      const content = document.getElementById('powerupsContent');
+      let html = '<p style="text-align: center; color: #7f8c8d;">Buy and use power-ups during gameplay</p>';
+
+      Object.keys(powerupTypes).forEach(type => {
+        const powerup = powerupTypes[type];
+        const inventory = powerupInventory[type] || 0;
+
+        html += `
+          <div class="powerup-item">
+            <div class="item-info">
+              <h3>${powerup.icon} ${powerup.name}</h3>
+              <p>${powerup.description}</p>
+              <p style="color: #27ae60; font-weight: bold;">In inventory: ${inventory}</p>
+            </div>
+            <div class="item-price">
+              <span class="price-tag">💰 ${powerup.price} coins</span>
+              <button class="buy-btn" onclick="buyPowerup('${type}')">
+                Buy
+              </button>
+              <button class="buy-btn" onclick="usePowerup('${type}')"
+                ${inventory <= 0 || !running ? 'disabled' : ''}
+                style="background: #27ae60; margin-top: 4px;">
+                ${running ? 'Use' : 'Start game first'}
+              </button>
+            </div>
+          </div>
+        `;
+      });
+
+      content.innerHTML = html;
+    }
+
+    function buyPowerup(type) {
+      const powerup = powerupTypes[type];
+      if(spendCoins(powerup.price)) {
+        if(!powerupInventory[type]) powerupInventory[type] = 0;
+        powerupInventory[type]++;
+        localStorage.setItem('powerupInventory', JSON.stringify(powerupInventory));
+        showMessage(`${powerup.icon} ${powerup.name} Purchased!`, 2000);
+        renderPowerupsModal();
+        trackEvent('powerup_purchased', { type, price: powerup.price });
+      } else {
+        showMessage('Not enough coins!', 2000);
+      }
+    }
+
+    // ===== MISSIONS SYSTEM =====
+    function openMissions() {
+      renderMissionsModal();
+      document.getElementById('missionsModal').style.display = 'block';
+      trackEvent('missions_opened');
+    }
+
+    function renderMissionsModal() {
+      if(dailyMissions.length === 0) {
+        dailyMissions = generateDailyMissions();
+        localStorage.setItem('dailyMissions', JSON.stringify(dailyMissions));
+      }
+
+      const content = document.getElementById('missionsContent');
+      let html = '<p style="text-align: center; color: #7f8c8d;">Complete daily missions to earn bonus coins!</p>';
+
+      dailyMissions.forEach((mission, index) => {
+        const progress = Math.min(mission.progress, mission.target);
+        const percentage = (progress / mission.target) * 100;
+
+        html += `
+          <div class="mission-item">
+            <div class="item-info">
+              <h3>${mission.description}</h3>
+              <p>Reward: 💰 ${mission.reward} coins</p>
+              <div style="background: #e9ecef; height: 8px; border-radius: 4px; margin-top: 8px;">
+                <div style="background: #667eea; height: 100%; width: ${percentage}%; border-radius: 4px;"></div>
+              </div>
+              <p style="font-size: 12px; color: #7f8c8d; margin-top: 4px;">${progress}/${mission.target}</p>
+            </div>
+            <div class="item-price">
+              <button class="buy-btn ${mission.completed ? 'owned' : ''}"
+                onclick="claimMission(${index})"
+                ${mission.completed || progress < mission.target ? 'disabled' : ''}>
+                ${mission.completed ? 'Claimed' : (progress >= mission.target ? 'Claim' : 'In Progress')}
+              </button>
+            </div>
+          </div>
+        `;
+      });
+
+      content.innerHTML = html;
+    }
+
+    function updateMissionProgress(missionId, amount) {
+      const mission = dailyMissions.find(m => m.id === missionId);
+      if(mission && !mission.completed) {
+        mission.progress += amount;
+        localStorage.setItem('dailyMissions', JSON.stringify(dailyMissions));
+      }
+    }
+
+    function claimMission(index) {
+      const mission = dailyMissions[index];
+      if(!mission.completed && mission.progress >= mission.target) {
+        mission.completed = true;
+        addCoins(mission.reward);
+        localStorage.setItem('dailyMissions', JSON.stringify(dailyMissions));
+        showMessage(`Mission Complete! +${mission.reward} coins!`, 2500);
+        renderMissionsModal();
+        trackEvent('mission_completed', { mission: mission.id, reward: mission.reward });
+      }
+    }
+
+    function checkDailyLogin() {
+      const today = new Date().toDateString();
+      if(lastLoginDate !== today) {
+        const yesterday = new Date(Date.now() - 86400000).toDateString();
+        if(lastLoginDate === yesterday) {
+          loginStreak++;
+        } else {
+          loginStreak = 1;
+        }
+        lastLoginDate = today;
+        localStorage.setItem('lastLoginDate', lastLoginDate);
+        localStorage.setItem('loginStreak', loginStreak);
+
+        // Reset daily missions
+        dailyMissions = generateDailyMissions();
+        localStorage.setItem('dailyMissions', JSON.stringify(dailyMissions));
+
+        // Show daily reward
+        showDailyReward();
+      }
+    }
+
+    function showDailyReward() {
+      const baseReward = 50;
+      const streakBonus = Math.min(loginStreak * 10, 100);
+      const totalReward = baseReward + streakBonus;
+
+      addCoins(totalReward);
+
+      setTimeout(() => {
+        const content = document.getElementById('dailyRewardContent');
+        content.innerHTML = `
+          <div style="text-align: center;">
+            <h3 style="font-size: 48px; margin: 20px 0;">🎁</h3>
+            <h2>Daily Reward!</h2>
+            <p style="font-size: 18px; margin: 20px 0;">
+              <span class="coin-icon" style="font-size: 24px;">💰</span>
+              <span style="font-size: 32px; font-weight: bold; color: #f39c12;">+${totalReward}</span> coins
+            </p>
+            <p style="color: #7f8c8d;">Login Streak: ${loginStreak} days 🔥</p>
+            <p style="color: #7f8c8d; font-size: 14px;">Keep your streak alive for bigger rewards!</p>
+            <button class="reward-ad-btn" onclick="closeModal('dailyRewardModal')" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+              Claim Reward
+            </button>
+          </div>
+        `;
+        document.getElementById('dailyRewardModal').style.display = 'block';
+        trackEvent('daily_reward_claimed', { reward: totalReward, streak: loginStreak });
+      }, 500);
+    }
+
+    // ===== PREMIUM SYSTEM =====
+    function openPremium() {
+      renderPremiumModal();
+      document.getElementById('premiumModal').style.display = 'block';
+      trackEvent('premium_opened');
+    }
+
+    function renderPremiumModal() {
+      const content = document.getElementById('premiumContent');
+
+      if(isPremium) {
+        content.innerHTML = `
+          <div style="text-align: center; padding: 20px;">
+            <h3 style="font-size: 48px; margin: 20px 0;">👑</h3>
+            <h2>You're Premium!</h2>
+            <p style="color: #7f8c8d;">Thank you for your support!</p>
+            <div class="stats-grid" style="margin-top: 30px;">
+              <div class="stat-box">
+                <div class="stat-value">✓</div>
+                <div class="stat-label">AD-FREE</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-value">✓</div>
+                <div class="stat-label">EXCLUSIVE SKINS</div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        content.innerHTML = `
+          <div style="text-align: center; padding: 20px;">
+            <h3 style="font-size: 48px; margin: 20px 0;">👑</h3>
+            <h2>Go Premium for $4.99</h2>
+            <ul style="text-align: left; max-width: 300px; margin: 30px auto; line-height: 2;">
+              <li>✅ Remove ALL ads forever</li>
+              <li>✅ Unlock 3 exclusive premium skins</li>
+              <li>✅ Daily coin bonus (2x)</li>
+              <li>✅ Priority support</li>
+              <li>✅ Support development</li>
+            </ul>
+            <button class="reward-ad-btn" onclick="buyPremium()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); font-size: 20px; padding: 16px 32px;">
+              Upgrade to Premium - $4.99
+            </button>
+            <p style="color: #7f8c8d; font-size: 12px; margin-top: 20px;">One-time payment. Lifetime access.</p>
+          </div>
+        `;
+      }
+    }
+
+    function buyPremium() {
+      processPayment(4.99, 'premium');
+    }
+
+    // ===== PAYMENT PROCESSING =====
+    function processPayment(amount, type, itemId = null) {
+      // In production, integrate with Stripe, PayPal, or other payment processor
+      console.log('Processing payment:', { amount, type, itemId });
+
+      // Simulate payment (for demo purposes)
+      if(confirm(`Process payment of $${amount.toFixed(2)}?\n\n(This is a demo - no real payment will be made)`)) {
+        // Track the purchase attempt
+        trackEvent('payment_initiated', { amount, type, itemId });
+
+        // Simulate successful payment
+        setTimeout(() => {
+          if(type === 'premium') {
+            isPremium = true;
+            localStorage.setItem('isPremium', 'true');
+            updateBannerAdVisibility();
+            showMessage('Welcome to Premium! 👑', 3000);
+            renderPremiumModal();
+            trackEvent('premium_purchased', { amount });
+          } else if(type === 'skin') {
+            ownedSkins.push(itemId);
+            localStorage.setItem('ownedSkins', JSON.stringify(ownedSkins));
+            showMessage(`${skinData[itemId].name} Skin Purchased!`, 2000);
+            renderShopModal();
+            trackEvent('skin_purchased', { skin: itemId, currency: 'usd', price: amount });
+          }
+
+          // In production, call your backend API:
+          // fetch('/api/purchase', {
+          //   method: 'POST',
+          //   headers: { 'Content-Type': 'application/json' },
+          //   body: JSON.stringify({ amount, type, itemId })
+          // });
+        }, 1000);
+      }
+    }
+
+    // ===== AD SYSTEM =====
+    function showInterstitialAd() {
+      if(isPremium) return;
+
+      // In production, show real interstitial ad (AdMob, Unity Ads, etc.)
+      console.log('Showing interstitial ad...');
+      trackEvent('ad_shown', { type: 'interstitial' });
+
+      // Simulate ad
+      showMessage('📺 Ad Loading... (Demo)', 2000);
+    }
+
+    function watchAdToContinue() {
+      if(continuesUsed >= 1) {
+        showMessage('Only one continue per game!', 2000);
+        return;
+      }
+
+      // Simulate rewarded ad
+      console.log('Showing rewarded ad - continue game');
+      trackEvent('ad_watched', { type: 'rewarded', purpose: 'continue' });
+      adsWatched++;
+      localStorage.setItem('adsWatched', adsWatched);
+
+      showMessage('📺 Watching Ad... (Demo)', 2000);
+
+      setTimeout(() => {
+        // Continue game
+        continuesUsed++;
+        bird.y = HEIGHT / 2;
+        bird.velocity = 0;
+        closeModal('gameOverModal');
+        running = true;
+        showMessage('Continue! Good luck!', 2000);
+      }, 2000);
+    }
+
+    function watchAdForCoins() {
+      // Simulate rewarded ad for coins
+      console.log('Showing rewarded ad - earn coins');
+      trackEvent('ad_watched', { type: 'rewarded', purpose: 'coins' });
+      adsWatched++;
+      localStorage.setItem('adsWatched', adsWatched);
+
+      showMessage('📺 Watching Ad... (Demo)', 2000);
+
+      setTimeout(() => {
+        const coinsEarned = 100;
+        addCoins(coinsEarned);
+        showMessage(`+${coinsEarned} coins earned!`, 2500);
+      }, 2000);
+    }
+
+    // ===== GAME OVER MODAL =====
+    function showGameOverModal(coinsEarned, isNewBest) {
+      document.getElementById('gameOverScore').innerText = score;
+      document.getElementById('coinsEarned').innerText = coinsEarned;
+      document.getElementById('modalBestScore').innerText = bestScore;
+      document.getElementById('modalTotalCoins').innerText = coins;
+
+      // Show continue option only once per game and not for premium users during initial death
+      const continueSection = document.getElementById('continueAdSection');
+      if(continuesUsed === 0 && !isPremium) {
+        continueSection.style.display = 'block';
+      } else {
+        continueSection.style.display = 'none';
+      }
+
+      document.getElementById('gameOverModal').style.display = 'block';
+    }
+
+    function closeGameOver() {
+      closeModal('gameOverModal');
+    }
+
+    // ===== MODAL MANAGEMENT =====
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
+
+    // Close modals when clicking outside
+    window.onclick = function(event) {
+      const modals = document.querySelectorAll('.modal');
+      modals.forEach(modal => {
+        if(event.target === modal) {
+          modal.style.display = 'none';
+        }
+      });
+    };
+
+    // ===== SOCIAL SHARING =====
+    function shareScore() {
+      const text = `I scored ${score} points in Abstract Flappy! Can you beat my score?`;
+      const url = window.location.href;
+
+      if(navigator.share) {
+        navigator.share({
+          title: 'Abstract Flappy Score',
+          text: text,
+          url: url
+        }).then(() => {
+          trackEvent('score_shared', { score, method: 'native' });
+          addCoins(25); // Bonus for sharing
+          showMessage('Thanks for sharing! +25 coins', 2000);
+        }).catch(err => console.log('Share failed:', err));
+      } else {
+        // Fallback: copy to clipboard
+        const shareText = `${text}\n${url}`;
+        navigator.clipboard.writeText(shareText).then(() => {
+          trackEvent('score_shared', { score, method: 'clipboard' });
+          addCoins(25);
+          showMessage('Score copied! Thanks for sharing! +25 coins', 2500);
+        });
+      }
+    }
+
+    // ===== ANALYTICS =====
+    function trackEvent(eventName, params = {}) {
+      // In production, integrate with Google Analytics, Mixpanel, etc.
+      console.log('Analytics Event:', eventName, params);
+
+      // Example Google Analytics integration:
+      // if(window.gtag) {
+      //   gtag('event', eventName, params);
+      // }
+    }
+
+    // ===== ANTI-CHEAT =====
     async function computeSeedHash() {
-      const text = JSON.stringify({seed, score, pipes:pipes.map(p => ({top:p.topHeight,bottom:p.bottomY}))});
+      const text = JSON.stringify({seed, score, pipes: pipes.map(p => ({top: p.topHeight, bottom: p.bottomY}))});
       const encoder = new TextEncoder();
       const data = encoder.encode(text);
       const digest = await crypto.subtle.digest('SHA-256', data);
@@ -405,16 +1377,23 @@
       return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    // Stubbed on‑chain submission
     function submitScoreToChain(score, seed, hash) {
-      // In production, this would send the score, seed and hash to the smart contract on the Abstract chain.
-      // Here we simply log it. Replace this function with actual on‑chain interaction as needed.
-      console.log('Submitting score to chain:', { score, seed, hash });
+      // In production: submit to blockchain leaderboard
+      console.log('Submitting to blockchain:', { score, seed, hash });
+
+      // Example integration with Abstract chain:
+      // const contract = new ethers.Contract(contractAddress, abi, signer);
+      // await contract.submitScore(score, seed, hash);
     }
 
-    // Initial draw (before game starts)
+    // ===== INITIALIZATION =====
     resetGame();
     draw();
+
+    // Show "Press Enter to Start" message
+    setTimeout(() => {
+      showMessage('Press Enter or Click to Start!', 3000);
+    }, 500);
   </script>
 </body>
 </html>

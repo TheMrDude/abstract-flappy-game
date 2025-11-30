@@ -76,9 +76,15 @@ open index.html
 
 ---
 
-## 💾 Demo Mode (No Backend)
+## 🔌 Backend Integration Status
 
-Currently running in **DEMO MODE**:
+**✅ Backend API is NOW INTEGRATED!**
+
+The game automatically tries to connect to the backend API on startup:
+
+### 📴 Offline Mode (Default - No Backend Running)
+
+When backend is not available:
 
 ✅ **Works:**
 - Full gameplay
@@ -90,29 +96,61 @@ Currently running in **DEMO MODE**:
 
 ⚠️ **Limitations:**
 - Data stored locally (localStorage)
-- No real payments
+- No real payments (demo only)
 - Can be "hacked" via browser console
 - Data lost if browser cache cleared
 
+### ✅ Online Mode (Backend Connected)
+
+When backend is running and reachable:
+
+✅ **Advantages:**
+- All operations server-validated
+- Real payment processing (Stripe)
+- Anti-cheat protection
+- Data persistence in database
+- Secure coin/purchase tracking
+- Production-ready
+
 ---
 
-## 🚀 Want Real Backend?
+## 🚀 Enable Backend API
 
-To enable real payments and server validation:
+The frontend is ready! Just configure and start your backend:
 
-1. **Deploy Backend:**
+### Quick Start:
+
+1. **Configure Backend URL** (in index.html):
+   ```javascript
+   // Find this section around line 607
+   const API_CONFIG = {
+     enabled: true,
+     url: 'http://localhost:3000', // Change to your backend URL
+     fallbackToLocal: true
+   };
+   ```
+
+2. **Deploy Backend:**
    ```bash
    cd backend
    npm install
-   # See PRODUCTION_GUIDE.md for deployment
+   npm start
+   # See PRODUCTION_GUIDE.md for production deployment
    ```
 
-2. **Update Frontend:**
-   - Set API URL in index.html
-   - Connect to backend
-   - Enable Stripe
+3. **Reload Game:**
+   - Refresh the browser
+   - Check console for "✅ ONLINE MODE"
+   - All purchases now server-validated!
 
-3. **See:** `PRODUCTION_GUIDE.md` for full instructions
+### Production Deployment:
+
+See **`PRODUCTION_GUIDE.md`** for:
+- Railway deployment (15 minutes)
+- MongoDB setup
+- Stripe configuration
+- Custom domain setup
+- Full production checklist
 
 ---
 
@@ -177,10 +215,16 @@ location.reload();
 
 ## 📊 Current Status
 
-**Game Version:** v2.0 (Revenue Edition + Security)
-**Backend:** Not connected (demo mode)
-**Payments:** Demo only (no real money)
-**Security:** Client-side only
+**Game Version:** v3.0 (Production-Ready with Backend Integration)
+**Backend:** ✅ Integrated (auto-detects, falls back to demo if unavailable)
+**Payments:** Ready for Stripe (online mode) / Demo (offline mode)
+**Security:** Server-side validation + anti-cheat (when backend connected)
+**Production Ready:** ✅ YES (deploy backend to go live)
+
+**Mode Indicator:**
+- Check browser console (F12) on game load
+- "✅ ONLINE MODE" = Backend connected, all secure
+- "📴 OFFLINE MODE" = Demo mode, using localStorage
 
 ---
 

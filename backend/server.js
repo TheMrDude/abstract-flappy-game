@@ -19,20 +19,69 @@ const { body, validationResult } = require('express-validator');
 
 const app = express();
 
+// ===== SECURITY VALIDATIONS =====
+
+// Validate JWT secret strength in production
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    console.error('❌ SECURITY ERROR: JWT_SECRET must be at least 32 characters in production');
+    process.exit(1);
+  }
+
+  if (!process.env.FRONTEND_URL || process.env.FRONTEND_URL === 'http://localhost:8080') {
+    console.error('❌ SECURITY ERROR: FRONTEND_URL must be set to production URL');
+    process.exit(1);
+  }
+
+  if (!process.env.MONGODB_URI || process.env.MONGODB_URI.includes('username:password')) {
+    console.error('❌ SECURITY ERROR: MONGODB_URI must be properly configured');
+    process.exit(1);
+  }
+}
+
 // ===== MIDDLEWARE SETUP =====
 
-// Security headers
-app.use(helmet());
-
-// CORS configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
-  credentials: true
+// Enhanced security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+    }
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
 }));
 
-// Body parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Strict CORS configuration
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
+  : ['http://localhost:8080', 'http://localhost:8000'];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = `The CORS policy for this site does not allow access from origin: ${origin}`;
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-ID']
+}));
+
+// Body parsing with stricter limits
+app.use(express.json({ limit: '1mb' })); // Reduced from 10mb
+app.use(express.urlencoded({ extended: true, limit: '1mb', parameterLimit: 100 }));
 
 // Compression
 app.use(compression());
@@ -42,7 +91,7 @@ if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
-// Rate limiting
+// Rate limiting - General API
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
@@ -51,6 +100,25 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 app.use('/api/', limiter);
+
+// Stricter rate limiting for authentication endpoints (prevent brute force)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per 15 minutes
+  skipSuccessfulRequests: true, // Don't count successful auth attempts
+  message: 'Too many authentication attempts, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Stricter rate limiting for payment endpoints
+const paymentLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // 10 requests per minute
+  message: 'Too many payment requests, please slow down',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Stripe webhook needs raw body
 app.post('/api/webhooks/stripe',
@@ -118,10 +186,11 @@ app.get('/health', (req, res) => {
 
 // Register new user
 app.post('/api/auth/register',
+  authLimiter, // Rate limiting to prevent abuse
   [
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 6 }),
-    body('deviceId').notEmpty()
+    body('deviceId').notEmpty().isLength({ max: 100 })
   ],
   async (req, res) => {
     try {
@@ -188,6 +257,7 @@ app.post('/api/auth/register',
 
 // Login
 app.post('/api/auth/login',
+  authLimiter, // Rate limiting to prevent brute force
   [
     body('email').isEmail().normalizeEmail(),
     body('password').notEmpty()
@@ -320,6 +390,7 @@ app.put('/api/user/profile', authenticate, async (req, res) => {
 // Purchase item with coins
 app.post('/api/purchase/coins',
   authenticate,
+  paymentLimiter, // Rate limiting for purchase requests
   [
     body('type').isIn(['skin', 'powerup']),
     body('itemId').isInt({ min: 0 }),
@@ -391,17 +462,24 @@ app.post('/api/purchase/coins',
 );
 
 // Create Stripe checkout session
-app.post('/api/purchase/create-checkout', authenticate, async (req, res) => {
-  try {
-    const { type, itemId, amount } = req.body;
+app.post('/api/purchase/create-checkout',
+  authenticate,
+  paymentLimiter, // Rate limiting for payment requests
+  [
+    body('type').isIn(['skin', 'premium']),
+    body('amount').isFloat({ min: 0.5, max: 10000 })
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          errors: errors.array()
+        });
+      }
 
-    // Validate purchase type
-    if (!['skin', 'premium'].includes(type)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid purchase type'
-      });
-    }
+      const { type, itemId, amount } = req.body;
 
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({

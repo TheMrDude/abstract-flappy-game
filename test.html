@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Abstract Flappy - Test Page</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+      color: white;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(255,255,255,0.1);
+      padding: 30px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+    }
+    .status {
+      margin: 20px 0;
+      padding: 15px;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.3);
+    }
+    .success { background: rgba(16, 185, 129, 0.3); }
+    .error { background: rgba(239, 68, 68, 0.3); }
+    .warning { background: rgba(245, 158, 11, 0.3); }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      margin: 10px 5px;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+    }
+    .big {
+      font-size: 20px;
+      padding: 20px 40px;
+    }
+    pre {
+      background: rgba(0,0,0,0.4);
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+    h1 { margin: 0 0 20px 0; }
+    h2 { margin: 30px 0 15px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Abstract Flappy - Diagnostic Test</h1>
+
+    <div id="tests">
+      <h2>Running Tests...</h2>
+    </div>
+
+    <div id="results"></div>
+
+    <div style="margin-top: 30px;">
+      <h2>🎯 Actions</h2>
+      <button class="big" onclick="openGame()">▶️ Open Game</button>
+      <button onclick="runTests()">🔄 Re-run Tests</button>
+      <button onclick="clearData()">🗑️ Clear All Data</button>
+    </div>
+
+    <div style="margin-top: 30px;">
+      <h2>📖 Quick Start</h2>
+      <p><strong>If all tests pass:</strong> Click "Open Game" above</p>
+      <p><strong>If tests fail:</strong> Use the local server method below</p>
+
+      <h3 style="margin-top: 20px;">Local Server Method:</h3>
+      <pre>cd /path/to/abstract-flappy-game
+
+# Option 1: Python
+python3 -m http.server 8000
+
+# Option 2: Node.js (if installed)
+npx http-server -p 8000
+
+# Then open: http://localhost:8000</pre>
+    </div>
+  </div>
+
+  <script>
+    async function runTests() {
+      const results = document.getElementById('results');
+      results.innerHTML = '<h2>Test Results:</h2>';
+
+      const tests = [
+        {
+          name: 'Browser Compatibility',
+          test: () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const audio = new (window.AudioContext || window.webkitAudioContext)();
+            return !!(canvas && ctx && audio);
+          }
+        },
+        {
+          name: 'LocalStorage Available',
+          test: () => {
+            try {
+              localStorage.setItem('test', 'test');
+              localStorage.removeItem('test');
+              return true;
+            } catch(e) {
+              return false;
+            }
+          }
+        },
+        {
+          name: 'DOMPurify Loaded',
+          test: () => typeof DOMPurify !== 'undefined'
+        },
+        {
+          name: 'Game Files Present',
+          test: async () => {
+            try {
+              const response = await fetch('abstract-logo.png');
+              return response.ok;
+            } catch(e) {
+              return false;
+            }
+          }
+        },
+        {
+          name: 'Ads Folder Present',
+          test: async () => {
+            try {
+              const response = await fetch('ads/placeholder.png');
+              return response.ok;
+            } catch(e) {
+              return false;
+            }
+          }
+        }
+      ];
+
+      let allPassed = true;
+
+      for (const test of tests) {
+        const div = document.createElement('div');
+        div.className = 'status';
+
+        try {
+          const result = await test.test();
+          div.className += result ? ' success' : ' error';
+          div.innerHTML = `<strong>${test.name}:</strong> ${result ? '✅ PASS' : '❌ FAIL'}`;
+          allPassed = allPassed && result;
+        } catch (error) {
+          div.className += ' error';
+          div.innerHTML = `<strong>${test.name}:</strong> ❌ ERROR - ${error.message}`;
+          allPassed = false;
+        }
+
+        results.appendChild(div);
+      }
+
+      const summary = document.createElement('div');
+      summary.className = 'status ' + (allPassed ? 'success' : 'warning');
+      summary.innerHTML = allPassed
+        ? '<strong>🎉 All Tests Passed!</strong> Click "Open Game" to play.'
+        : '<strong>⚠️ Some Tests Failed</strong> - Use local server method or check errors above.';
+      results.appendChild(summary);
+
+      // Add diagnostic info
+      const info = document.createElement('div');
+      info.className = 'status';
+      info.innerHTML = `
+        <h3>System Info:</h3>
+        <ul style="margin: 10px 0; padding-left: 20px;">
+          <li>Browser: ${navigator.userAgent.split(' ').pop()}</li>
+          <li>Protocol: ${window.location.protocol}</li>
+          <li>Origin: ${window.location.origin}</li>
+          <li>Path: ${window.location.pathname}</li>
+        </ul>
+      `;
+      results.appendChild(info);
+    }
+
+    function openGame() {
+      window.location.href = 'index.html';
+    }
+
+    function clearData() {
+      if (confirm('This will clear all saved game data. Continue?')) {
+        localStorage.clear();
+        alert('✅ All data cleared! Reload the game for a fresh start.');
+      }
+    }
+
+    // Run tests on load
+    window.addEventListener('load', runTests);
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+</body>
+</html>
